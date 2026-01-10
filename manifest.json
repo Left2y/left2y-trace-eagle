@@ -1,0 +1,25 @@
+{
+  "id": "left2y-trace",
+  "version": "0.1.0",
+  "platform": "mac",
+  "name": "Raster to Vector",
+  "logo": "assets/icon.png",
+  "keywords": [
+    "vector",
+    "svg",
+    "potrace",
+    "trace",
+    "bitmap"
+  ],
+  "devTools": true,
+  "main": {
+    "url": "index.html",
+    "width": 420,
+    "height": 600,
+    "minWidth": 380,
+    "minHeight": 500,
+    "resizable": true,
+    "frame": true,
+    "alwaysOnTop": false
+  }
+}

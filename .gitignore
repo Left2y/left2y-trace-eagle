@@ -1,0 +1,15 @@
+# System
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+
+# Build/Temp
+tmp/
+dist/
+.idea/
+.vscode/
+
+# Logs
+*.log

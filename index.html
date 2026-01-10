@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Raster to Vector</title>
+  <link rel="stylesheet" href="src/ui/styles.css">
+</head>
+
+<body>
+  <div id="app">
+    <!-- 头部标题 -->
+    <header class="header">
+      <div class="header-content">
+        <div class="logo-area">
+          <img src="assets/icon.png" class="logo-icon" alt="Logo">
+          <h1>Raster to Vector</h1>
+        </div>
+        <button id="btn-settings" class="icon-button" title="设置">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
+        </button>
+      </div>
+      <p class="subtitle">将位图转换为矢量图</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="preset-selector">
+        <label for="preset-select">模式:</label>
+        <select id="preset-select">
+          <!-- 动态生成 -->
+        </select>
+      </div>
+
+      <div class="checkbox-wrapper">
+        <input type="checkbox" id="invert-check">
+        <label for="invert-check" title="选中此项以反转颜色（例如将白底黑字转为黑底白字）">反相</label>
+      </div>
+    </div>
+
+
+    <!-- 状态显示区 -->
+    <section class="status-section">
+      <div id="status" class="status">
+        <span class="status-icon">⏳</span>
+        <span id="status-text">等待初始化...</span>
+      </div>
+      <!-- 进度条 (默认隐藏) -->
+      <div id="progress-container" class="progress-container hidden">
+        <progress id="progress-bar" value="0" max="100"></progress>
+        <span id="progress-text">0%</span>
+      </div>
+    </section>
+
+    <!-- 文件列表区 -->
+    <section class="file-list-section">
+      <div id="file-list" class="file-list">
+        <div class="placeholder">
+          <p>选中的文件将显示在这里</p>
+          <p style="font-size: 12px; margin-top: 8px;">支持格式: .png, .jpg, .bmp</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 操作按钮区 -->
+    <section class="action-section">
+      <button id="btn-convert" class="btn btn-primary" disabled>
+        开始转换
+      </button>
+      <button id="btn-cancel" class="btn btn-danger hidden">
+        停止
+      </button>
+    </section>
+
+    <!-- 日志/结果区 -->
+    <section class="log-section">
+      <div id="log" class="log">
+        <p class="log-entry">插件启动中...</p>
+      </div>
+    </section>
+  </div>
+
+
+
+  <!-- 设置面板 -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>此功能开发中...</h2>
+        <button id="btn-close-settings" class="icon-button close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>高级参数调节将在下一版本提供。</p>
+        <p>目前请使用预设模式。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 加载主脚本 -->
+  <script src="main.js"></script>
+</body>
+
+</html>
