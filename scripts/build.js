@@ -23,7 +23,8 @@ const COMMON_IGNORE = [
     'release_notes.md',
     '.gitignore',
     'README.md',
-    'LICENSE'
+    'LICENSE',
+    'Raster to Vector.eagleplugin' // 避免把已有包嵌入包体
 ];
 
 /**
