@@ -16,143 +16,163 @@ const path = require('path');
 const potrace = require('./potrace');
 const imageConverter = require('./imageConverter');
 const fsAdapter = require('../adapters/fsAdapter');
+const fs = require('fs');
 
 // ========================================
-// 单张图片转换
+// Phase 1 Core: 分离预处理
 // ========================================
 /**
- * 将一张图片转换为 SVG
+ * 1. 预处理阶段 (耗时)
+ * 将输入图片清洗、缩放、归一化为标准的 PGM 文件
  * 
- * @param {string} inputPath - 输入图片路径（PNG/JPG/BMP）
- * @param {object} options - 配置选项
- * @param {object} options.potrace - potrace 参数
- * @param {boolean} options.keepTemp - 是否保留临时文件
- * @returns {Promise<ConvertResult>}
+ * @param {string} inputPath 
+ * @param {string} tempDir (可选, 如果不传则自动创建)
+ * @returns {Promise<{pgmPath: string, tempDir: string, stats: object}>}
+ */
+async function preprocessImage(inputPath, tempDir = null) {
+    const startTime = Date.now();
+    const baseName = fsAdapter.getBaseName(inputPath);
+
+    // 如果没有提供临时目录，创建一个新的
+    if (!tempDir) {
+        tempDir = fsAdapter.createTempDir(baseName);
+    }
+
+    const pgmPath = fsAdapter.getTempFilePath(tempDir, baseName, '.pgm');
+    console.log('[pipeline] Preprocess Start:', inputPath);
+
+    // 调用 imageConverter 进行 Canvas 绘图 + 缩放 + 归一化
+    const convertResult = await imageConverter.convertToPgm(inputPath, pgmPath);
+
+    if (!convertResult.success) {
+        throw new Error(`预处理失败: ${convertResult.error}`);
+    }
+
+    const duration = Date.now() - startTime;
+    console.log('[pipeline] Preprocess Done, PGM created:', pgmPath, `(${duration}ms)`);
+
+    return {
+        pgmPath,
+        tempDir,
+        stats: { preprocessTime: duration }
+    };
+}
+
+// ========================================
+// Phase 1 Core: 实时追踪
+// ========================================
+/**
+ * 2. 追踪阶段 (快速 / 实时)
+ * 使用指定参数将 PGM 转换为 SVG 字符串 (预览用) 或 文件 (保存用)
  * 
- * 🗺️ 逻辑思路：
- * 1. 创建临时目录
- * 2. 如果是 PNG/JPG，先用 sips 转为 BMP
- * 3. 执行 potrace：BMP → SVG
- * 4. 验证输出文件
- * 5. 清理或保留临时文件
- * 6. 返回结果
+ * @param {string} pgmPath - 预处理好的 PGM 路径
+ * @param {object} options - Potrace 参数 (opttolerance, alphamax, etc.)
+ * @param {string} outputPath - (可选) 如果传了路径，则写入文件；否则只读出内容
+ * @returns {Promise<{svgContent: string, outputPath?: string}>}
+ */
+async function tracePgm(pgmPath, options = {}, outputPath = null) {
+    const startTime = Date.now();
+
+    // 构造临时输出路径 (potrace 必须输出到文件，不能直接 stdout svg)
+    // 我们可以输出到一个 temp svg，然后读出来
+    const tempSvgPath = outputPath || pgmPath.replace('.pgm', `_${Date.now()}.svg`);
+
+    console.log('[pipeline] Trace Start (Params):', JSON.stringify(options));
+
+    const potraceResult = await potrace.run(
+        pgmPath,
+        tempSvgPath,
+        options
+    );
+
+    if (!potraceResult.success) {
+        throw new Error(`Tracing 失败: ${potraceResult.error}`);
+    }
+
+    // 读取生成的 SVG 内容
+    let svgContent = '';
+    if (fs.existsSync(tempSvgPath)) {
+        svgContent = fs.readFileSync(tempSvgPath, 'utf-8');
+    }
+
+    // 如果只是为了预览 (outputPath 为空)，读完后可以把这个临时的 SVG 删掉
+    if (!outputPath) {
+        try {
+            fs.unlinkSync(tempSvgPath);
+        } catch (e) { /* ignore */ }
+    }
+
+    const duration = Date.now() - startTime;
+    console.log('[pipeline] Trace Done', `(${duration}ms)`);
+
+    return {
+        success: true,
+        svgContent,
+        outputPath: outputPath ? tempSvgPath : null,
+        stats: { traceTime: duration }
+    };
+}
+
+// ========================================
+// 兼容旧接口：一键转换
+// ========================================
+/**
+ * 传统的全流程转换 (v1.3 逻辑的 wrapper)
  */
 async function convertOne(inputPath, options = {}) {
-    const startTime = Date.now();         // 记录开始时间
-    const baseName = fsAdapter.getBaseName(inputPath);  // 获取文件基础名
-
-    // 创建临时目录
-    const tempDir = fsAdapter.createTempDir(baseName);
-
-    // 定义中间文件路径
-    const bmpPath = fsAdapter.getTempFilePath(tempDir, baseName, '.bmp');
-    const svgPath = fsAdapter.getTempFilePath(tempDir, baseName, '.svg');
-
-    console.log('[pipeline] 开始转换:', inputPath);
-    console.log('[pipeline] 临时目录:', tempDir);
-
-    // potrace 的输入（可能是原文件或转换后的 BMP）
-    let potraceInput = inputPath;
+    const startTime = Date.now();
+    let tempDir = null;
+    let pgmPath = null;
 
     try {
-        // ========================================
-        // Step 1: 格式转换（如果需要）
-        // ========================================
-        if (imageConverter.needsConversion(inputPath)) {
-            console.log('[pipeline] Step 1: PNG/JPG → BMP...');
+        // Step 1: Preprocess
+        const preResult = await preprocessImage(inputPath);
+        tempDir = preResult.tempDir;
+        pgmPath = preResult.pgmPath;
 
-            const convertResult = await imageConverter.convertToBmp(inputPath, bmpPath);
+        // Step 2: Trace
+        const baseName = fsAdapter.getBaseName(inputPath);
+        const svgPath = fsAdapter.getTempFilePath(tempDir, baseName, '.svg');
 
-            if (!convertResult.success) {
-                throw new Error(`格式转换失败: ${convertResult.error}`);
-            }
-
-            // 验证 BMP 输出
-            const bmpValidation = fsAdapter.validateOutput(bmpPath);
-            if (!bmpValidation.exists || bmpValidation.size === 0) {
-                throw new Error('sips 输出的 BMP 文件为空或不存在');
-            }
-
-            console.log('[pipeline] BMP 转换成功，大小:', bmpValidation.size, 'bytes');
-            potraceInput = bmpPath;  // 使用转换后的 BMP 作为 potrace 输入
-        }
-
-        // ========================================
-        // Step 2: potrace（BMP → SVG）
-        // ========================================
-        console.log('[pipeline] Step 2: BMP → SVG (potrace)...');
-        const potraceResult = await potrace.run(
-            potraceInput,
-            svgPath,
-            options.potrace || {}
+        const traceResult = await tracePgm(
+            pgmPath,
+            options.potrace || {},
+            svgPath
         );
 
-        if (!potraceResult.success) {
-            throw new Error(`potrace 失败: ${potraceResult.error}\n${potraceResult.stderr || ''}`);
-        }
-
-        // 验证 SVG 输出
-        const svgValidation = fsAdapter.validateOutput(svgPath);
-        if (!svgValidation.exists || svgValidation.size === 0) {
-            throw new Error('potrace 输出的 SVG 文件为空或不存在');
-        }
-        console.log('[pipeline] SVG 生成成功，大小:', svgValidation.size, 'bytes');
-
-        // ========================================
-        // 计算耗时
-        // ========================================
-        const duration = Date.now() - startTime;
-        console.log('[pipeline] 转换完成，耗时:', duration, 'ms');
-
-        // ========================================
-        // 清理临时文件（可选）
-        // ========================================
+        // Step 3: Cleanup (Optional)
         if (!options.keepTemp) {
-            const fs = require('fs');
-            // 删除中间文件（BMP），保留 SVG
             try {
-                if (fs.existsSync(bmpPath)) fs.unlinkSync(bmpPath);
-                console.log('[pipeline] 已删除临时 BMP 文件');
-            } catch (e) {
-                console.warn('[pipeline] 删除临时文件失败:', e.message);
-            }
+                if (fs.existsSync(pgmPath)) fs.unlinkSync(pgmPath);
+            } catch (e) { }
         }
 
-        // 返回成功结果
         return {
             success: true,
-            inputPath: inputPath,
+            inputPath,
             outputPath: svgPath,
-            tempDir: tempDir,
+            tempDir,
             stats: {
-                duration: duration,
-                outputSize: svgValidation.size
+                duration: Date.now() - startTime,
+                preprocessTime: preResult.stats.preprocessTime,
+                traceTime: traceResult.stats.traceTime
             }
         };
 
     } catch (error) {
-        // ========================================
-        // 错误处理
-        // ========================================
-        const duration = Date.now() - startTime;
-        console.error('[pipeline] 转换失败:', error.message);
-
-        // 失败时保留临时目录，方便调试
+        console.error('[pipeline] Full Convert Failed:', error);
         return {
             success: false,
-            inputPath: inputPath,
+            inputPath,
             error: error.message,
-            tempDir: tempDir,
-            stats: {
-                duration: duration
-            }
+            tempDir,
+            stats: { duration: Date.now() - startTime }
         };
     }
 }
 
-// ========================================
-// 导出模块
-// ========================================
 module.exports = {
+    preprocessImage,
+    tracePgm,
     convertOne
 };

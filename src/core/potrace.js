@@ -27,7 +27,7 @@ const { getBinPath } = require('./binResolver');
  * 经过测试验证，这组参数适合干净的 Logo/图标转换
  */
 const DEFAULT_PARAMS = {
-    invert: true,         // -i: 反转位图（白底→追踪深色）
+    invert: false,        // -i: 禁用反转（输入已归一化为 "Dark on White"）
     blacklevel: 0.3,      // -k: 黑度阈值（低于此值视为黑色）
     alphamax: 0.5,        // -a: 角点阈值，0.5 更锐利
     opttolerance: 0.2,    // -O: 曲线优化容差
