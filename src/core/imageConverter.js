@@ -10,7 +10,7 @@
  * 
  * 解决方案：
  * - macOS: 使用系统自带的 sips 命令
- * - 其他平台: 可以使用 ImageMagick 或 sharp 库
+ * - Windows: 使用内置 PowerShell/.NET 转换为 BMP
  * 
  * sips (Scriptable Image Processing System):
  * macOS 自带的图像处理工具，功能强大且无需安装。
@@ -42,54 +42,77 @@ function needsConversion(filePath) {
 }
 
 // ========================================
-// 使用 sips 转换为 BMP
+// 跨平台转换为 BMP
 // ========================================
 /**
- * 使用 macOS sips 将图片转换为 BMP 格式
- * 
+ * 将图片转换为 BMP 格式（mac 用 sips，Windows 用 PowerShell/.NET）
+ *
  * @param {string} inputPath - 输入图片路径
  * @param {string} outputPath - 输出 BMP 路径
  * @returns {Promise<{success: boolean, outputPath?: string, error?: string}>}
- * 
- * sips 命令格式：
- * sips -s format bmp <input> --out <output>
  */
 function convertToBmp(inputPath, outputPath) {
     return new Promise((resolve) => {
-        console.log('[imageConverter] 使用 sips 转换:', inputPath, '->', outputPath);
+        const platform = process.platform;
 
-        // sips 参数：
-        // -s format bmp : 设置输出格式为 BMP
-        // --out <path> : 指定输出路径
-        const args = ['-s', 'format', 'bmp', inputPath, '--out', outputPath];
+        if (platform === 'darwin') {
+            console.log('[imageConverter] macOS 使用 sips 转换:', inputPath, '->', outputPath);
+            const args = ['-s', 'format', 'bmp', inputPath, '--out', outputPath];
+            const proc = spawn('sips', args);
+            let stderr = '';
 
-        const process = spawn('sips', args);
-
-        let stderr = '';
-
-        process.stderr.on('data', (data) => {
-            stderr += data.toString();
-        });
-
-        process.on('close', (code) => {
-            if (code === 0) {
-                resolve({
-                    success: true,
-                    outputPath: outputPath
-                });
-            } else {
-                resolve({
-                    success: false,
-                    error: `sips 退出码: ${code}, ${stderr}`
-                });
-            }
-        });
-
-        process.on('error', (err) => {
-            resolve({
-                success: false,
-                error: err.message
+            proc.stderr.on('data', (data) => {
+                stderr += data.toString();
             });
+
+            proc.on('close', (code) => {
+                if (code === 0) {
+                    resolve({ success: true, outputPath });
+                } else {
+                    resolve({ success: false, error: `sips 退出码: ${code}, ${stderr}` });
+                }
+            });
+
+            proc.on('error', (err) => {
+                resolve({ success: false, error: err.message });
+            });
+            return;
+        }
+
+        if (platform === 'win32') {
+            console.log('[imageConverter] Windows 使用 PowerShell 转 BMP:', inputPath, '->', outputPath);
+            const escapedInput = inputPath.replace(/'/g, "''");
+            const escapedOutput = outputPath.replace(/'/g, "''");
+            const psScript = `
+Add-Type -AssemblyName System.Drawing;
+$img = [System.Drawing.Image]::FromFile('${escapedInput}');
+$img.Save('${escapedOutput}', [System.Drawing.Imaging.ImageFormat]::Bmp);
+$img.Dispose();`;
+            const args = ['-NoProfile', '-NonInteractive', '-Command', psScript];
+            const proc = spawn('powershell.exe', args);
+            let stderr = '';
+
+            proc.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            proc.on('close', (code) => {
+                if (code === 0) {
+                    resolve({ success: true, outputPath });
+                } else {
+                    resolve({ success: false, error: `PowerShell 转换失败 (exit ${code}): ${stderr}` });
+                }
+            });
+
+            proc.on('error', (err) => {
+                resolve({ success: false, error: err.message });
+            });
+            return;
+        }
+
+        resolve({
+            success: false,
+            error: `当前平台未提供内置转换器: ${platform}`
         });
     });
 }

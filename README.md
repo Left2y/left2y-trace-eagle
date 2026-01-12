@@ -2,7 +2,7 @@
 
 ![Icon](assets/icon.png)
 
-当前版本：**v1.1**（macOS Apple Silicon，自包含静态编译的 `potrace`，无需额外安装 Homebrew 版依赖）
+当前版本：**v1.2**（内置 macOS arm64 & Windows x64 二进制，自动按平台选择，免安装依赖；mac 用 sips，Windows 内置 PowerShell/.NET 转 BMP）
 
 一个将位图 (PNG, JPG, BMP) 转换为矢量 SVG 的 **Eagle** 插件。特别适合将 Logo、手绘草图、扫描件快速矢量化。
 
@@ -17,14 +17,14 @@
 - **无缝集成**：转换后的 SVG 自动导入到 Eagle 当前文件夹，保留原图信息。
 - **本地运行**：无需上传服务器，所有处理均在本地完成，隐私安全。
 
-> [!IMPORTANT]
-> 本插件依赖 macOS 原生工具，目前仅支持 **macOS (Apple Silicon / M1/M2/M3)** 系统。暂不支持 Windows 或 Intel Mac。
-> v1.1 起内置静态编译的 `potrace`，不再依赖 `/opt/homebrew` 下的共享库。
+> v1.2 起：
+> - 内置 macOS arm64 与 Windows x64 的 `potrace`/`mkbitmap`，自动按平台选择。
+> - macOS 继续用系统 sips 转 BMP；Windows 使用内置 PowerShell/.NET 进行 PNG/JPG→BMP 转换，无需额外安装。
 
 ## 📦 安装方法
 
 1.  访问 [GitHub Releases](https://github.com/Left2y/left2y-trace-eagle/releases) 页面。
-2.  下载最新版本的 `Raster.to.Vector.eagleplugin` 文件（v1.1 已包含自带的 `potrace`，无需再安装 Homebrew 版本）。
+2.  下载对应平台的 `Raster_to_Vector_mac_v*.eagleplugin` 或 `Raster_to_Vector_win_v*.eagleplugin`。
 3.  双击运行该文件，或将其拖入 Eagle 窗口即可自动安装。
 
 > 如果你想手动安装源代码：
@@ -50,8 +50,9 @@
 ```
 .
 ├── assets/          # 静态资源 (图标)
-├── bin/             # 二进制可执行文件 (potrace)
-│   └── darwin-arm64/
+├── bin/             # 二进制可执行文件 (potrace/mkbitmap)
+│   ├── darwin-arm64/
+│   └── win32-x64/
 ├── src/
 │   ├── adapters/    # Eagle API 与文件系统适配器
 │   ├── core/        # 核心逻辑 (pipeline, potrace 封装)
@@ -63,12 +64,14 @@
 
 ### 依赖说明
 
-- **potrace**: 自带静态编译的 macOS arm64 版本 (GPLv2)，无外部 dylib 依赖。
+- **potrace/mkbitmap**: 自带 macOS arm64 与 Windows x64 版本 (GPLv2)，无外部 dylib/DLL 依赖。
 - **sips**: macOS 内置图像处理工具（用于格式转换）。
+- **Windows BMP 转换**: 内置 PowerShell/.NET 脚本，无需额外安装。
 
 ## 📝 版本记录
 
-- **v1.1**: 内置静态编译的 `potrace`（解决 “Library not loaded: libpotrace.0.dylib” 报错），插件版本号更新为 1.1.0。
+- **v1.2**: 内置 Windows x64 `potrace`/`mkbitmap`，BMP 转换自动区分 mac sips 与 Windows PowerShell/.NET；manifest 支持 mac+win。
+- **v1.1**: 内置静态编译的 macOS `potrace`，解决 Homebrew dylib 依赖。
 - **v1.0**: 初始公开版本。
 
 ## 📄 License

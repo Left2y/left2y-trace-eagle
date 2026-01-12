@@ -40,12 +40,11 @@ const COMMON_IGNORE = [
 
 async function build() {
     console.log('📦 开始构建...');
-
     await buildPlatform('mac', 'darwin-arm64');
-    // await buildPlatform('win', 'win32-x64'); // Windows halted
-
+    await buildPlatform('win', 'win32-x64');
     console.log('🎉 构建完成！查看 dist 目录。');
 }
+
 
 async function buildPlatform(platformAlias, binDirName) {
     console.log(`\n🔨 构建 [${platformAlias}] 版本...`);
