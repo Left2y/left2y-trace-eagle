@@ -2,7 +2,7 @@
 
 ![Icon](assets/icon.png)
 
-当前版本：**v1.4**（现场调参版 | Live Tuning）
+当前版本：**v1.5**（精简发布版 | 现场调参 + 轻量包体）
 
 一个将位图 (PNG, JPG, BMP) 转换为矢量 SVG 的 **Eagle** 插件。v1.4 版本引入了专业的实时预览与参数调节功能，配合智能超采样技术，让转换质量质的飞跃。
 
@@ -24,7 +24,7 @@
 - **黑度阈值 (Threshold)**: 微调黑白识别的分界线。
 
 ### ⚡️ 极简转换链
-- **Pure JavaScript**: v1.4 移除了对系统命令 (sips/ImageMagick) 的依赖，全部图像处理在 Canvas 中完成，跨平台（macOS/Windows）表现完全一致且更稳定。
+- **Pure JavaScript**: 移除对系统命令 (sips/ImageMagick) 的依赖，全部图像处理在 Canvas 中完成，跨平台（macOS/Windows）表现一致且更稳定。
 
 ## 📦 安装方法
 
