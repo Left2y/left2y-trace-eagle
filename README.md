@@ -2,6 +2,8 @@
 
 ![Icon](assets/icon.png)
 
+当前版本：**v1.1**（macOS Apple Silicon，自包含静态编译的 `potrace`，无需额外安装 Homebrew 版依赖）
+
 一个将位图 (PNG, JPG, BMP) 转换为矢量 SVG 的 **Eagle** 插件。特别适合将 Logo、手绘草图、扫描件快速矢量化。
 
 ## ✨ 功能特点
@@ -17,11 +19,12 @@
 
 > [!IMPORTANT]
 > 本插件依赖 macOS 原生工具，目前仅支持 **macOS (Apple Silicon / M1/M2/M3)** 系统。暂不支持 Windows 或 Intel Mac。
+> v1.1 起内置静态编译的 `potrace`，不再依赖 `/opt/homebrew` 下的共享库。
 
 ## 📦 安装方法
 
 1.  访问 [GitHub Releases](https://github.com/Left2y/left2y-trace-eagle/releases) 页面。
-2.  下载最新版本的 `Raster.to.Vector.eagleplugin` 文件。
+2.  下载最新版本的 `Raster.to.Vector.eagleplugin` 文件（v1.1 已包含自带的 `potrace`，无需再安装 Homebrew 版本）。
 3.  双击运行该文件，或将其拖入 Eagle 窗口即可自动安装。
 
 > 如果你想手动安装源代码：
@@ -60,8 +63,13 @@
 
 ### 依赖说明
 
-- **potrace**: 核心矢量化引擎 (GPLv2)。
+- **potrace**: 自带静态编译的 macOS arm64 版本 (GPLv2)，无外部 dylib 依赖。
 - **sips**: macOS 内置图像处理工具（用于格式转换）。
+
+## 📝 版本记录
+
+- **v1.1**: 内置静态编译的 `potrace`（解决 “Library not loaded: libpotrace.0.dylib” 报错），插件版本号更新为 1.1.0。
+- **v1.0**: 初始公开版本。
 
 ## 📄 License
 
