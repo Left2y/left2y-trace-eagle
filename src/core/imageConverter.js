@@ -10,14 +10,13 @@
  * 
  * 解决方案：
  * - macOS: 使用系统自带的 sips 命令
- * - Windows: 使用内置 PowerShell/.NET 转换为 BMP
- * 
- * sips (Scriptable Image Processing System):
- * macOS 自带的图像处理工具，功能强大且无需安装。
+ * - Windows: 优先使用内置 ImageMagick (便携版 magick.exe) 转 BMP，若缺失则回退 PowerShell/.NET
  */
 
 const { spawn } = require('child_process');
+const fs = require('fs');
 const path = require('path');
+const { getPluginDir } = require('./binResolver');
 
 // ========================================
 // 支持的输入格式
@@ -45,7 +44,7 @@ function needsConversion(filePath) {
 // 跨平台转换为 BMP
 // ========================================
 /**
- * 将图片转换为 BMP 格式（mac 用 sips，Windows 用 PowerShell/.NET）
+ * 将图片转换为 BMP 格式（mac 用 sips，Windows 用内置 ImageMagick；备用回退 PowerShell/.NET）
  *
  * @param {string} inputPath - 输入图片路径
  * @param {string} outputPath - 输出 BMP 路径
@@ -80,7 +79,32 @@ function convertToBmp(inputPath, outputPath) {
         }
 
         if (platform === 'win32') {
-            console.log('[imageConverter] Windows 使用 PowerShell 转 BMP:', inputPath, '->', outputPath);
+            const magickPath = path.join(getPluginDir(), 'bin', 'win32-x64', 'imagemagick', 'magick.exe');
+            if (fsExists(magickPath)) {
+                console.log('[imageConverter] Windows 使用内置 ImageMagick:', magickPath);
+                const args = [magickPath, inputPath, 'BMP3:' + outputPath];
+                const proc = spawn(args.shift(), args);
+                let stderr = '';
+
+                proc.stderr.on('data', (data) => {
+                    stderr += data.toString();
+                });
+
+                proc.on('close', (code) => {
+                    if (code === 0) {
+                        resolve({ success: true, outputPath });
+                    } else {
+                        resolve({ success: false, error: `ImageMagick 退出码: ${code}, ${stderr}` });
+                    }
+                });
+
+                proc.on('error', (err) => {
+                    resolve({ success: false, error: err.message });
+                });
+                return;
+            }
+
+            console.log('[imageConverter] ImageMagick 不可用，回退 PowerShell 转 BMP:', inputPath, '->', outputPath);
             const escapedInput = inputPath.replace(/'/g, "''");
             const escapedOutput = outputPath.replace(/'/g, "''");
             const psScript = `
@@ -115,6 +139,15 @@ $img.Dispose();`;
             error: `当前平台未提供内置转换器: ${platform}`
         });
     });
+}
+
+function fsExists(p) {
+    try {
+        fs.accessSync(p);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 // ========================================
